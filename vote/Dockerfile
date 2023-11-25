@@ -26,6 +26,9 @@ FROM base AS final
 # Copy our code from the current folder to the working directory inside the container
 COPY . .
 
+# Copy ratings.csv from the vote directory to the container's working directory
+COPY ./vote/ratings.csv /usr/local/app/ratings.csv
+
 # Make port 80 available for links and/or publish
 EXPOSE 80
 
