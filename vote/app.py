@@ -96,61 +96,77 @@ def load_users_from_csv(filename):
             userId = row['userId']
             movieId = row['movieId']
             rating = float(row['rating'])
-            
+
             if userId not in users:
                 users[userId] = {}
             users[userId][movieId] = rating
 
     return users
 
-# Cargar los usuarios desde el archivo CSV
-users2 = load_users_from_csv('ratings.csv')
-
 def pearson_correlation(rating1, rating2):
-    """Computes the Pearson correlation. Both rating1 and rating2 are dictionaries
-       of the form {'The Strokes': 3.0, 'Slightly Stoopid': 2.5}"""
+    sum_rating1 = sum(rating1.values())
+    sum_rating2 = sum(rating2.values())
+    sum_sq_rating1 = sum([rating ** 2 for rating in rating1.values()])
+    sum_sq_rating2 = sum([rating ** 2 for rating in rating2.values()])
+
+    n = min(len(rating1), len(rating2))
+    if n == 0:
+        return 0.0  # No common items, return 0 to avoid division by zero
+
     numerator = 0
-    sum_rating1 = 0
-    sum_rating2 = 0
-    sum_sq_rating1 = 0
-    sum_sq_rating2 = 0
-    n = 0
-    for key in rating1:
-        if key in rating2:
-            n += 1
-            numerator += (rating1[key] - sum(rating1.values()) / n) * (rating2[key] - sum(rating2.values()) / n)
-            sum_rating1 += rating1[key]
-            sum_rating2 += rating2[key]
-            sum_sq_rating1 += rating1[key] ** 2
-            sum_sq_rating2 += rating2[key] ** 2
-    denominator = sqrt((sum_sq_rating1 - sum_rating1 ** 2 / n) * (sum_sq_rating2 - sum_rating2 ** 2 / n))
+    denominator1 = 0
+    denominator2 = 0
+
+    for item in rating1:
+        if item in rating2:
+            rating1_diff = rating1[item] - (sum_rating1 / n)
+            rating2_diff = rating2[item] - (sum_rating2 / n)
+            numerator += rating1_diff * rating2_diff
+            denominator1 += rating1_diff ** 2
+            denominator2 += rating2_diff ** 2
+
+    denominator = sqrt(denominator1 * denominator2)
     if not denominator:
         return 0.0
     else:
         return numerator / denominator
 
 def computeNearestNeighbor(username, users):
-    """creates a sorted list of users based on their distance to username"""
     distances = []
     for user in users:
         if user != username:
             distance = pearson_correlation(users[user], users[username])
             distances.append((distance, user))
-    # sort based on distance -- closest first
     distances.sort(reverse=True)
     return distances
 
 def recommend(username, users):
-    """Give list of recommendations"""
-    # first find nearest neighbor
     nearest = computeNearestNeighbor(username, users)[1:6]
 
-    print(f"Los 5 vecinos más cercanos a {username} son:")
+    movies_rated_by_user = set(users[username].keys())
+
+    recommendations = {}
     for neighbor in nearest:
-        print(neighbor[1])
+        neighbor_username = neighbor[1]
+        neighbor_movies = users[neighbor_username]
+
+        for movie in neighbor_movies:
+            if movie not in movies_rated_by_user:
+                if movie not in recommendations:
+                    recommendations[movie] = neighbor_movies[movie]
+                else:
+                    recommendations[movie] += neighbor_movies[movie]
+
+    sorted_recommendations = sorted(recommendations.items(), key=lambda x: x[1], reverse=True)
+
+    print(f"Las recomendaciones para {username} son:")
+    for movie, rating in sorted_recommendations[:5]:
+        print(f"Película: {movie}, Puntuación: {rating}")
 
 # Ejemplo de uso
-#print(users)
+users2 = load_users_from_csv('ratings.csv')
+username = '1'  # Replace this with the desired user ID for recommendations
+recommend(username, users2)
 print(pearson_correlation(users2['1'], users2['5']))
 
 ################################################################
